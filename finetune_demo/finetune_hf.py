@@ -50,13 +50,13 @@ class DataCollatorForSeq2Seq(_DataCollatorForSeq2Seq):
             max_output_length = max(len(out) for out in output_ids)
             if self.pad_to_multiple_of is not None:
                 max_output_length = (
-                        (
-                                max_output_length + self.pad_to_multiple_of - 1) //
-                        self.pad_to_multiple_of * self.pad_to_multiple_of
+                    (
+                        max_output_length + self.pad_to_multiple_of - 1) //
+                    self.pad_to_multiple_of * self.pad_to_multiple_of
                 )
             for feature in features:
                 remainder = [self.tokenizer.pad_token_id] * (
-                        max_output_length - len(feature['output_ids'])
+                    max_output_length - len(feature['output_ids'])
                 )
                 if isinstance(feature['output_ids'], list):
                     feature['output_ids'] = feature['output_ids'] + remainder
@@ -163,7 +163,7 @@ class FinetuningConfig(object):
     max_output_length: int
 
     training_args: Seq2SeqTrainingArguments = dc.field(
-        default_factory=lambda: Seq2SeqTrainingArguments(output_dir='./output')
+        default_factory=lambda: Seq2SeqTrainingArguments(output_dir='/ssdData/llm/peft/models/chatglm3_2/chatglm3-6b')
     )
     peft_config: Optional[PeftConfig] = None
 
@@ -175,8 +175,8 @@ class FinetuningConfig(object):
             self.data_config.val_file = None
         else:
             self.training_args.per_device_eval_batch_size = (
-                    self.training_args.per_device_eval_batch_size
-                    or self.training_args.per_device_train_batch_size
+                self.training_args.per_device_eval_batch_size
+                or self.training_args.per_device_train_batch_size
             )
 
     @classmethod
