@@ -23,8 +23,7 @@ TOKENIZER_PATH = os.environ.get("TOKENIZER_PATH", MODEL_PATH)
 
 @st.cache_resource
 def get_client() -> Client:
-    client = HFClient(MODEL_PATH, TOKENIZER_PATH, PT_PATH)
-    return client
+    return HFClient(MODEL_PATH, TOKENIZER_PATH, PT_PATH)
 
 
 class Client(Protocol):
@@ -51,6 +50,7 @@ def stream_chat(
         return_past_key_values=False,
         **kwargs
 ):
+
     class InvalidScoreLogitsProcessor(LogitsProcessor):
         def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
             if torch.isnan(scores).any() or torch.isinf(scores).any():
@@ -96,15 +96,17 @@ def stream_chat(
     history.append({"role": role, "content": query})
     input_sequence_length = inputs['input_ids'].shape[1]
     if input_sequence_length + max_new_tokens >= self.config.seq_length:
-        yield "Current input sequence length {} plus max_new_tokens {} is too long. The maximum model sequence length is {}. You may adjust the generation parameter to enable longer chat history.".format(
-            input_sequence_length, max_new_tokens, self.config.seq_length
-        ), history
+        yield (
+            f"Current input sequence length {input_sequence_length} plus max_new_tokens {max_new_tokens} is too long. The maximum model sequence length is {self.config.seq_length}. You may adjust the generation parameter to enable longer chat history.",
+            history,
+        )
         return
 
     if input_sequence_length > self.config.seq_length:
-        yield "Current input sequence length {} exceeds maximum model sequence length {}. Unable to generate tokens.".format(
-            input_sequence_length, self.config.seq_length
-        ), history
+        yield (
+            f"Current input sequence length {input_sequence_length} exceeds maximum model sequence length {self.config.seq_length}. Unable to generate tokens.",
+            history,
+        )
         return
 
     for outputs in self.stream_generate(**inputs, past_key_values=past_key_values,
@@ -141,10 +143,11 @@ class HFClient(Client):
             # add .quantize(bits=4, device="cuda").cuda() before .eval() and remove device_map="auto" to use int4 model
             # must use cuda to load int4 model
             prefix_state_dict = torch.load(os.path.join(pt_checkpoint, "pytorch_model.bin"))
-            new_prefix_state_dict = {}
-            for k, v in prefix_state_dict.items():
-                if k.startswith("transformer.prefix_encoder."):
-                    new_prefix_state_dict[k[len("transformer.prefix_encoder."):]] = v
+            new_prefix_state_dict = {
+                k[len("transformer.prefix_encoder."):]: v
+                for k, v in prefix_state_dict.items()
+                if k.startswith("transformer.prefix_encoder.")
+            }
             print("Loaded from pt checkpoints", new_prefix_state_dict.keys())
             self.model.transformer.prefix_encoder.load_state_dict(new_prefix_state_dict)
         else:
@@ -161,18 +164,21 @@ class HFClient(Client):
     ) -> Iterable[TextGenerationStreamResponse]:
         chat_history = [{
             'role': 'system',
-            'content': system if not tools else TOOL_PROMPT,
+            'content': TOOL_PROMPT if tools else system,
         }]
 
         if tools:
             chat_history[0]['tools'] = tools
 
-        for conversation in history[:-1]:
-            chat_history.append({
-                'role': str(conversation.role).removeprefix('<|').removesuffix('|>'),
+        chat_history.extend(
+            {
+                'role': str(conversation.role)
+                .removeprefix('<|')
+                .removesuffix('|>'),
                 'content': conversation.content,
-            })
-
+            }
+            for conversation in history[:-1]
+        )
         query = history[-1].content
         role = str(history[-1].role).removeprefix('<|').removesuffix('|>')
         text = ''

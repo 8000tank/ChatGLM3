@@ -72,10 +72,7 @@ model, tokenizer = load_model_and_tokenizer(MODEL_PATH, trust_remote_code=True)
 class StopOnTokens(StoppingCriteria):
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
         stop_ids = [0, 2]
-        for stop_id in stop_ids:
-            if input_ids[0][-1] == stop_id:
-                return True
-        return False
+        return any(input_ids[0][-1] == stop_id for stop_id in stop_ids)
 
 
 def parse_text(text):
@@ -86,26 +83,26 @@ def parse_text(text):
         if "```" in line:
             count += 1
             items = line.split('`')
+            lines[i] = (
+                f'<pre><code class="language-{items[-1]}">'
+                if count % 2 == 1
+                else '<br></code></pre>'
+            )
+        elif i > 0:
             if count % 2 == 1:
-                lines[i] = f'<pre><code class="language-{items[-1]}">'
-            else:
-                lines[i] = f'<br></code></pre>'
-        else:
-            if i > 0:
-                if count % 2 == 1:
-                    line = line.replace("`", "\`")
-                    line = line.replace("<", "&lt;")
-                    line = line.replace(">", "&gt;")
-                    line = line.replace(" ", "&nbsp;")
-                    line = line.replace("*", "&ast;")
-                    line = line.replace("_", "&lowbar;")
-                    line = line.replace("-", "&#45;")
-                    line = line.replace(".", "&#46;")
-                    line = line.replace("!", "&#33;")
-                    line = line.replace("(", "&#40;")
-                    line = line.replace(")", "&#41;")
-                    line = line.replace("$", "&#36;")
-                lines[i] = "<br>" + line
+                line = line.replace("`", "\`")
+                line = line.replace("<", "&lt;")
+                line = line.replace(">", "&gt;")
+                line = line.replace(" ", "&nbsp;")
+                line = line.replace("*", "&ast;")
+                line = line.replace("_", "&lowbar;")
+                line = line.replace("-", "&#45;")
+                line = line.replace(".", "&#46;")
+                line = line.replace("!", "&#33;")
+                line = line.replace("(", "&#40;")
+                line = line.replace(")", "&#41;")
+                line = line.replace("$", "&#36;")
+            lines[i] = f"<br>{line}"
     text = "".join(lines)
     return text
 
@@ -163,10 +160,8 @@ with gr.Blocks() as demo:
             top_p = gr.Slider(0, 1, value=0.8, step=0.01, label="Top P", interactive=True)
             temperature = gr.Slider(0.01, 1, value=0.6, step=0.01, label="Temperature", interactive=True)
 
-
     def user(query, history):
         return "", history + [[parse_text(query), ""]]
-
 
     submitBtn.click(user, [user_input, chatbot], [user_input, chatbot], queue=False).then(
         predict, [chatbot, max_length, top_p, temperature], chatbot

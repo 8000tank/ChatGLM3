@@ -35,7 +35,7 @@ tools = [
                  {
                      'description': '需要追踪的股票代码'
                  }
-             },
+              },
              'required': []
          }
      }, {
@@ -54,7 +54,7 @@ tools = [
                         },
                     'speed': {
                         'description': '语音的速度（快、中等、慢等）'
-                    }
+                            }
                 }, 'required': []
             }
     },
