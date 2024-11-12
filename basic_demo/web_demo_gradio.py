@@ -38,7 +38,7 @@ from transformers import (
 ModelType = Union[PreTrainedModel, PeftModelForCausalLM]
 TokenizerType = Union[PreTrainedTokenizer, PreTrainedTokenizerFast]
 
-MODEL_PATH = os.environ.get('MODEL_PATH', 'THUDM/chatglm3-6b')
+MODEL_PATH = os.environ.get('MODEL_PATH', '/ssdData/llm/peft/models/chatglm3_2/chatglm3-6b/checkpoint-5000')
 TOKENIZER_PATH = os.environ.get("TOKENIZER_PATH", MODEL_PATH)
 
 
